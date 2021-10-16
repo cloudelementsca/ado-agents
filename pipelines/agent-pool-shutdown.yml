@@ -1,0 +1,56 @@
+# Terraform plan and apply to shutdown Cloud Operations agent pool
+
+pool:
+  # use cloud operations when testing
+  # name: 'Cloud Operations'
+  # Azure Pipeline agent pool, comment the above name. No name needed for default azure agent pool
+  vmImage: 'windows-latest'
+
+variables:  
+  - group:  ado-agents
+
+schedules:
+- cron: "00 00 * * 2-6"
+  displayName: Shutdown Agent Pool M-F 8:00 PM (UTC - 5:00) Eastern Time
+  branches:
+    include:
+    - master
+  always: true
+
+resources:
+  repositories:
+    - repository: templates
+      type: github
+      name: cloudelementsca/yaml-pipeline-templates
+      endpoint: github-yaml-templates-sc
+
+jobs:
+
+- job: ShutdownAgentPool
+  displayName: Shutdown via Terraform plan and apply  
+  steps:  
+  - template: terraform/src-tf-apply.yaml@templates
+    parameters:
+      ###
+      preTerraformSetup:
+      - task: CopyFiles@2
+        displayName: Create Pipeline Artifact
+        inputs:
+          Contents:
+            terraform/agents/*.*            
+          TargetFolder: '$(build.artifactstagingdirectory)/CommonServicesTF'
+          CleanTargetFolder: true
+          flattenFolders: true
+
+      - task: replacetokens@3
+        displayName: Replace tokens in Terraform Config Directory
+        inputs:
+          rootDirectory: $(build.artifactstagingdirectory)/CommonServicesTF
+          targetFiles: '**'
+          tokenPrefix: __
+          tokenSuffix: __
+          enableTelemetry: false
+      ###
+      workingDirectory: '$(build.artifactstagingdirectory)/CommonServicesTF'
+      environmentServiceName: '$(environmentServiceName)'
+      tfversion: '$(tfversion)'

@@ -1,0 +1,109 @@
+# ACR Build task to build agent images
+pool:
+  vmImage: 'windows-latest'
+
+variables:  
+  - name: windows-agent-version
+    value: 'v1.0.0'
+  - name: linux-agent-version
+    value: 'v1.0.0'
+  - group:  ado-agents
+
+resources:
+  repositories:
+    - repository: templates
+      type: github
+      name: cloudelementsca/yaml-pipeline-templates
+      endpoint: github-yaml-templates-sc
+
+jobs:
+- job: DeployACR
+  displayName: Deploy Resources and ACR (Terraform Apply)
+  # dependsOn: BuildAndTest
+  steps:  
+  - template: terraform/src-tf-apply.yaml@templates
+    parameters:
+      ###
+      preTerraformSetup:
+      - task: CopyFiles@2
+        displayName: Create Pipeline Artifact
+        inputs:
+          Contents: |
+            terraform/acr/*.tf
+            terraform/acr/*.tfvars            
+          TargetFolder: '$(build.artifactstagingdirectory)/CommonServicesTF'
+          CleanTargetFolder: true
+          flattenFolders: true
+
+      - task: replacetokens@3
+        displayName: Replace tokens in Terraform Config Directory
+        inputs:
+          rootDirectory: $(build.artifactstagingdirectory)/CommonServicesTF
+          targetFiles: '**'
+          tokenPrefix: __
+          tokenSuffix: __
+          enableTelemetry: false
+      ###
+      workingDirectory: '$(build.artifactstagingdirectory)/CommonServicesTF'
+      environmentServiceName: '$(environmentServiceName)'
+      tfversion: '$(tfversion)'
+
+- job: BuildSelfhostedAgent
+  displayName: Build self-hosted agent docker images
+  timeoutInMinutes: 180
+  dependsOn: DeployACR
+  steps:
+  - task: AzureCLI@2
+    displayName: 'ACR build Windows agent image '
+    timeoutInMinutes: 120
+    inputs:
+      azureSubscription: '$(environmentServiceName)'
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: |
+        az acr build --registry cloudelementsacr -t winagent:$(windows-agent-version) -t winagent:latest --timeout 7200 --platform windows .
+      workingDirectory: dockeragent/windowsagent
+    enabled: true
+
+  - task: AzureCLI@2
+    displayName: 'ACR build Linux agent image'
+    timeoutInMinutes: 120
+    inputs:
+      azureSubscription: '$(environmentServiceName)'
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: |
+        az acr build --registry cloudelementsacr -t linuxagent:$(linux-agent-version) -t linuxagent:latest --timeout 7200 .
+      workingDirectory: dockeragent/linuxagent
+    enabled: true
+
+- job: DeployAgents
+  displayName: Deploy Self-hosted Agents (Terraform Apply)
+  dependsOn: BuildSelfhostedAgent
+  steps:  
+  - template: terraform/src-tf-apply.yaml@templates
+    parameters:
+      ###
+      preTerraformSetup:
+      - task: CopyFiles@2
+        displayName: Create Pipeline Artifact
+        inputs:
+          Contents: |
+            terraform/agents/*.tf
+            terraform/agents/*.tfvars            
+          TargetFolder: '$(build.artifactstagingdirectory)/CommonServicesTF'
+          CleanTargetFolder: true
+          flattenFolders: true
+
+      - task: replacetokens@3
+        displayName: Replace tokens in Terraform Config Directory
+        inputs:
+          rootDirectory: $(build.artifactstagingdirectory)/CommonServicesTF
+          targetFiles: '**'
+          tokenPrefix: __
+          tokenSuffix: __
+          enableTelemetry: false
+      ###
+      workingDirectory: '$(build.artifactstagingdirectory)/CommonServicesTF'
+      environmentServiceName: '$(environmentServiceName)'
+      tfversion: '$(tfversion)'

@@ -1,0 +1,59 @@
+# Terraform plan and apply to start up Cloud Operations agent pool
+
+pool:
+  # use cloud operations when testing
+  # name: 'Cloud Operations' # TODO: change to regular Azure Hosted Pool for production
+  # Azure Pipeline agent pool, comment the above name. No name needed for default azure agent pool
+  vmImage: 'windows-latest'
+
+variables:  
+  - group:  ado-agents
+
+schedules:
+- cron: "00 11 * * 1-5"
+  displayName: Startup Agent Pool M-F 7:00 AM (UTC - 5:00) Eastern Time
+  branches:
+    include:
+    - master
+  always: true
+
+resources:
+  repositories:
+    - repository: templates
+      type: github
+      name: cloudelementsca/yaml-pipeline-templates
+      endpoint: github-yaml-templates-sc
+
+jobs:
+- job: DeployAgents
+  displayName: Terraform Apply
+  dependsOn: BuildAndTest
+  steps:  
+  - template: terraform/src-tf-apply.yaml@templates
+    parameters:
+      ###
+      preTerraformSetup:
+      - task: CopyFiles@2
+        displayName: Create Pipeline Artifact
+        inputs:
+          Contents:
+            terraform/agents/*.*            
+          TargetFolder: '$(build.artifactstagingdirectory)/CommonServicesTF'
+          CleanTargetFolder: true
+          flattenFolders: true
+
+      - task: replacetokens@3
+        displayName: Replace tokens in Terraform Config Directory
+        inputs:
+          rootDirectory: $(build.artifactstagingdirectory)/CommonServicesTF
+          targetFiles: '**'
+          tokenPrefix: __
+          tokenSuffix: __
+          enableTelemetry: false
+      ###
+      workingDirectory: '$(build.artifactstagingdirectory)/CommonServicesTF'
+      environmentServiceName: '$(environmentServiceName)'
+      tfversion: '$(tfversion)'
+
+
+
