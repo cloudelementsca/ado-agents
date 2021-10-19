@@ -7,8 +7,9 @@ variable "resource_groups" {
 variable "aci_vnet" {
   description = "Virtual network for the ACI"
   type = object({
-    name   = string
-    rg_key = string
+    name          = string
+    address_space = list(string)
+    rg_key        = string
   })
 }
 

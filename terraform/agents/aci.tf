@@ -1,10 +1,20 @@
 /*
+* Create Azure VNET
+*/
+resource "azurerm_virtual_network" "agentvent" {
+  name                = var.aci_vnet.name
+  location            = data.azurerm_resource_group.rgs[var.aci_subnet.rg_key].location
+  resource_group_name = data.azurerm_resource_group.rgs[var.aci_subnet.rg_key].name
+  address_space       = var.aci_vnet.address_space
+}
+
+/*
 * Create new subnet for container group
 */
 resource "azurerm_subnet" "containergroupsubnet" {
   name                 = var.aci_subnet.name
   resource_group_name  = data.azurerm_resource_group.rgs[var.aci_subnet.rg_key].name
-  virtual_network_name = data.azurerm_virtual_network.vnet.name
+  virtual_network_name = azurerm_virtual_network.agentvent.name
   address_prefixes     = var.aci_subnet.address_prefixes
 
   delegation {

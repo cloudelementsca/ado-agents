@@ -7,19 +7,6 @@ variable "rg" {
   })
 }
 
-/* */
-variable "vnet" {
-  description = "virtual network"
-  type = object({
-    name          = string
-    address_space = list(string)
-    subnet = object({
-      name           = string
-      address_prefix = string
-    })
-  })
-}
-
 variable "acr" {
   description = "Azure Container Registry settings"
   type = object({

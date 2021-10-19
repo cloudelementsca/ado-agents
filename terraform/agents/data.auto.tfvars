@@ -5,15 +5,6 @@ resource_groups = {
   "agentrg" = "SelfHostedAgentRg"
 }
 
-
-/*
-  ACI VNET where container subnet located
-*/
-aci_vnet = {
-  name   = "agentvnet"
-  rg_key = "agentrg"
-}
-
 /*
   Tags
 */

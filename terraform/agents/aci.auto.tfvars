@@ -3,12 +3,22 @@
 */
 
 /*
+* VNET
+*/
+aci_vnet = {
+  name          = "agentvnet"
+  address_space = ["192.168.1.0/24"]
+  rg_key        = "agentrg"
+}
+
+/*
   ACI Container Group Subnet 
 */
 aci_subnet = {
   name             = "AgentContainerSubnet"
   address_prefixes = ["192.168.1.160/27"]
   rg_key           = "agentrg"
+
   delegation = {
     name                    = "aci-delegation"
     service_delegation_name = "Microsoft.ContainerInstance/containerGroups"
@@ -58,6 +68,6 @@ linuxCg = {
   azure_devops_org_url  = "__AZP_URL__"
   personal_access_token = "__PERSONAL_ACCESS_TOKEN__"
   agent_pool_name       = "__AZP_POOL__"
-  number_of_agents = __NUMBER_OF_LINUX_AGENT__
+  number_of_agents      = __NUMBER_OF_LINUX_AGENT__
 }
 

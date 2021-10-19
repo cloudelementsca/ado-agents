@@ -13,8 +13,8 @@ terraform {
     resource_group_name  = "__terraformstoragerg__"
     storage_account_name = "__terraformstorageaccount__"
     container_name       = "__terraformstoragecontainername__"
-    key        = "__terraformstatename__"
-    access_key = "__storagekey__"
+    key                  = "__terraformstatename__"
+    access_key           = "__storagekey__"
   }
 
   required_providers {
@@ -25,7 +25,7 @@ terraform {
   }
 }
 
-provider "azurerm" {  
+provider "azurerm" {
   features {}
 }
 
